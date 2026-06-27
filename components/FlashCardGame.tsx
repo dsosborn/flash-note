@@ -54,6 +54,8 @@ export default function FlashCardGame() {
   const wrongDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Tracks the midi that's currently being debounced for wrong detection.
   const lastWrongMidiRef = useRef<number | null>(null);
+  // Only one wrong answer is counted per card.
+  const hasWrongedThisCardRef = useRef(false);
   // Always reflects the latest detectedMidi so timeouts can check the live value.
   const detectedMidiRef = useRef<number | null>(null);
   // Index ref so the advance timeout can read the latest value.
@@ -82,6 +84,8 @@ export default function FlashCardGame() {
 
   // Advance to the next card or finish the test.
   const advanceToNext = useCallback((currentIndex: number) => {
+    hasWrongedThisCardRef.current = false;
+    lastWrongMidiRef.current = null;
     if (currentIndex + 1 >= totalRef.current) {
       if (timerRef.current) clearInterval(timerRef.current);
       setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
@@ -137,7 +141,10 @@ export default function FlashCardGame() {
       // Wrong note — register if not currently debounced.
       if (detectedMidi !== lastWrongMidiRef.current) {
         lastWrongMidiRef.current = detectedMidi;
-        setWrongCount((c) => c + 1);
+        if (!hasWrongedThisCardRef.current) {
+          hasWrongedThisCardRef.current = true;
+          setWrongCount((c) => c + 1);
+        }
         setFlashWrong(true);
         setWrongNoteLabel(detectedNote);
         // Compute which clef and VexFlow key to draw the wrong note on.
@@ -176,6 +183,7 @@ export default function FlashCardGame() {
     setWrongNoteLabel(null);
     setWrongNoteDisplay(null);
     lastWrongMidiRef.current = null;
+    hasWrongedThisCardRef.current = false;
     await start();
     setScreen("playing");
   }, [start]);

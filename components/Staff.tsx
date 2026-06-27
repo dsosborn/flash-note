@@ -23,8 +23,18 @@ export default function Staff({ note, color = "#1a1a2e", wrongNote }: StaffProps
     if (!containerRef.current) return;
 
     let cancelled = false;
+    let rafId: number;
 
-    (async () => {
+    const render = async () => {
+      if (cancelled || !containerRef.current) return;
+
+      // If the container hasn't been laid out yet, wait one more frame.
+      const containerWidth = containerRef.current.offsetWidth;
+      if (containerWidth === 0) {
+        rafId = requestAnimationFrame(render);
+        return;
+      }
+
       const VF = await import("vexflow");
       if (cancelled || !containerRef.current) return;
 
@@ -40,10 +50,10 @@ export default function Staff({ note, color = "#1a1a2e", wrongNote }: StaffProps
         Formatter,
       } = VF;
 
-      const SCALE = 1.6;
       const BASE_WIDTH = 300;
       const BASE_HEIGHT = 220;
-      const WIDTH = Math.round(BASE_WIDTH * SCALE);
+      const SCALE = containerWidth / BASE_WIDTH;
+      const WIDTH = containerWidth;
       const HEIGHT = Math.round(BASE_HEIGHT * SCALE);
       const TREBLE_Y = 20;
       const BASS_Y = 105;
@@ -128,16 +138,20 @@ export default function Staff({ note, color = "#1a1a2e", wrongNote }: StaffProps
 
       treble.voices.forEach((v) => v.draw(context, treble.stave));
       bass.voices.forEach((v) => v.draw(context, bass.stave));
-    })();
+    };
 
-    return () => { cancelled = true; };
+    rafId = requestAnimationFrame(render);
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(rafId);
+    };
   }, [note, color, wrongNote]);
 
   return (
     <div
       ref={containerRef}
-      className="staff-container flex items-center justify-center"
-      style={{ minHeight: 352, minWidth: 480 }}
+      className="staff-container w-full"
       aria-label={`Grand staff showing note ${note.label} on ${note.clef} clef`}
     />
   );
