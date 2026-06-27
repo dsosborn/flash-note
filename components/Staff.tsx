@@ -28,15 +28,19 @@ export default function Staff({ note, color = "#1a1a2e", wrongNote }: StaffProps
     const render = async () => {
       if (cancelled || !containerRef.current) return;
 
-      // If the container hasn't been laid out yet, wait one more frame.
+      // Load VexFlow first (cached after first call, but async on initial load).
+      const VF = await import("vexflow");
+      if (cancelled || !containerRef.current) return;
+
+      // Measure width HERE — after the async gap — so we always get the
+      // post-layout value. On first load the import takes real time and the
+      // page may still be laying out beforehand.
       const containerWidth = containerRef.current.offsetWidth;
       if (containerWidth === 0) {
+        // Layout not ready yet — retry next frame.
         rafId = requestAnimationFrame(render);
         return;
       }
-
-      const VF = await import("vexflow");
-      if (cancelled || !containerRef.current) return;
 
       containerRef.current.innerHTML = "";
 
